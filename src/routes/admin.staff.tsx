@@ -313,34 +313,54 @@ function StaffDialog({
           </div>
 
           <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label>Allocated Wards</Label>
-              {availableWards.length > 0 && (
-                <button
-                  type="button"
-                  className="text-xs text-primary hover:underline"
-                  onClick={toggleAllWards}
-                >
-                  {allWardsSelected ? "Clear all" : "Select all"}
-                </button>
-              )}
-            </div>
+            <Label>Allocated Wards</Label>
             <ScrollArea className="h-48 rounded-md border p-2">
               {selectedPanchayaths.length === 0 && (
                 <p className="text-sm text-muted-foreground">Select panchayaths first.</p>
               )}
-              {selectedPanchayaths.length > 0 && availableWards.length === 0 && (
-                <p className="text-sm text-muted-foreground">No wards in selected panchayaths.</p>
-              )}
-              {availableWards.map((w) => (
-                <label key={w.id} className="flex items-center gap-2 py-1 text-sm cursor-pointer">
-                  <Checkbox
-                    checked={selectedWards.includes(w.id)}
-                    onCheckedChange={() => toggleWard(w.id)}
-                  />
-                  <span>{w.ward_number ? `Ward ${w.ward_number}` : w.name}</span>
-                </label>
-              ))}
+              {selectedPanchayaths.map((pid) => {
+                const panchayath = panchayaths.find((x) => x.id === pid);
+                const groupWards = wards.filter((w) => w.panchayath_id === pid);
+                const allSelected = groupWards.length > 0 && groupWards.every((w) => selectedWards.includes(w.id));
+                const toggleGroup = () => {
+                  const ids = new Set(groupWards.map((w) => w.id));
+                  if (allSelected) {
+                    setSelectedWards((prev) => prev.filter((id) => !ids.has(id)));
+                  } else {
+                    setSelectedWards((prev) => Array.from(new Set([...prev, ...groupWards.map((w) => w.id)])));
+                  }
+                };
+                return (
+                  <div key={pid} className="mb-3 last:mb-0">
+                    <div className="flex items-center justify-between border-b pb-1 mb-1">
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                        {panchayath?.name ?? "—"}
+                      </span>
+                      {groupWards.length > 0 && (
+                        <button
+                          type="button"
+                          className="text-xs text-primary hover:underline"
+                          onClick={toggleGroup}
+                        >
+                          {allSelected ? "Clear all" : "Select all"}
+                        </button>
+                      )}
+                    </div>
+                    {groupWards.length === 0 && (
+                      <p className="text-xs text-muted-foreground py-1">No wards.</p>
+                    )}
+                    {groupWards.map((w) => (
+                      <label key={w.id} className="flex items-center gap-2 py-1 text-sm cursor-pointer">
+                        <Checkbox
+                          checked={selectedWards.includes(w.id)}
+                          onCheckedChange={() => toggleWard(w.id)}
+                        />
+                        <span>{w.ward_number ? `Ward ${w.ward_number}` : w.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                );
+              })}
             </ScrollArea>
           </div>
         </div>
