@@ -162,9 +162,8 @@ export function GraphCanvas({ cfg }: { cfg: GraphConfig }) {
   });
 
   const createNode = useMutation({
-    mutationFn: async (payload: { name: string; extra?: string; direction?: Direction }) => {
-      const insert: any = { name: payload.name };
-      if (cfg.extraField && payload.extra) insert[cfg.extraField.key] = payload.extra;
+    mutationFn: async (payload: { name: string; parentId: string; direction?: Direction }) => {
+      const insert: any = { name: payload.name, [cfg.parentRef.key]: payload.parentId };
       const { data, error } = await supabase.from(cfg.nodesTable).insert(insert).select("*").single();
       if (error) throw error;
       if (payload.direction && centerId) {
