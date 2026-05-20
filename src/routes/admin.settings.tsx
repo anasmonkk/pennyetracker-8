@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
@@ -7,8 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Save, ExternalLink } from "lucide-react";
+import { Save, ExternalLink, Upload, Trash2, MapIcon } from "lucide-react";
 import { GOOGLE_MAPS_KEY_NAME, useGoogleMapsKey } from "@/hooks/use-google-maps-key";
+import { useQuery } from "@tanstack/react-query";
+import { clearCachedMbtiles } from "@/lib/mbtilesCache";
 
 export const Route = createFileRoute("/admin/settings")({
   component: SettingsPage,
