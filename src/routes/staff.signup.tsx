@@ -1,9 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { staffSignup } from "@/lib/staff-signup.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,7 +15,6 @@ export const Route = createFileRoute("/staff/signup")({
 
 function StaffSignupPage() {
   const navigate = useNavigate();
-  const signup = useServerFn(staffSignup);
   const [form, setForm] = useState({
     full_name: "",
     phone: "",
@@ -59,8 +56,9 @@ function StaffSignupPage() {
     }
     setLoading(true);
     try {
-      const res = await signup({ data: form });
-      if (!res.ok) throw new Error(res.error);
+      const { data, error } = await supabase.functions.invoke("staff-signup", { body: form });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
       setDone(true);
     } catch (e: any) {
       setErr(e?.message ?? "Something went wrong");
