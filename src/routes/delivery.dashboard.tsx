@@ -26,7 +26,7 @@ function DeliveryDashboard() {
     if (!roles.includes("delivery")) { navigate({ to: "/staff/pending" }); }
   }, [loading, user, isAdmin, roles, navigate]);
 
-  const { data: staff } = useQuery({
+  const { data: staff, isLoading: staffLoading } = useQuery({
     enabled: !!user,
     queryKey: ["my-staff", user?.id],
     queryFn: async () => {
