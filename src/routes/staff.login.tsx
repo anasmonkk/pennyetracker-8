@@ -77,6 +77,7 @@ function StaffLoginPage() {
           </form>
           <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
             <Link to="/staff/signup" className="hover:text-foreground">Create a staff account</Link>
+            <Link to="/auth" className="hover:text-foreground">Admin login</Link>
             <Link to="/landing" className="hover:text-foreground">← Home</Link>
           </div>
         </CardContent>
