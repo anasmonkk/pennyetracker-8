@@ -68,10 +68,21 @@ function Landing() {
     else navigate({ to: "/staff/pending" });
   }, [user, roles, loading, isAdmin, navigate]);
 
-  if (loading || !user || !isAdmin) {
+  // Don't block the whole page on auth — redirects above run as soon as
+  // roles resolve. Admins see the dashboard immediately; everyone else gets
+  // briefly redirected by the effect above.
+  if (loading && !user) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background px-4 text-sm text-muted-foreground">
-        Checking authentication…
+        Loading…
+      </main>
+    );
+  }
+
+  if (user && !isAdmin) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background px-4 text-sm text-muted-foreground">
+        Redirecting…
       </main>
     );
   }
