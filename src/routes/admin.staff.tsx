@@ -260,62 +260,18 @@ function StaffPage() {
         </Card>
       )}
 
-      <Card className="mt-6 divide-y">
-        {isLoading && <div className="p-6 text-center text-muted-foreground">Loading…</div>}
-        {!isLoading && staff.length === 0 && (
-          <div className="p-6 text-center text-muted-foreground">No staff yet. Add your first delivery person.</div>
-        )}
-        {staff.map((s) => {
-          const isOpen = !!expanded[s.id];
-          return (
-            <Collapsible key={s.id} open={isOpen} onOpenChange={(o) => setExpanded((e) => ({ ...e, [s.id]: o }))}>
-              <div className="flex items-center gap-2 p-3">
-                <CollapsibleTrigger asChild>
-                  <Button size="icon" variant="ghost" className="shrink-0">
-                    {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                  </Button>
-                </CollapsibleTrigger>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate">{s.full_name}</div>
-                  <div className="text-xs text-muted-foreground">{s.phone}{s.alt_phone ? ` · ${s.alt_phone}` : ""}</div>
-                </div>
-                <Badge variant={s.status === "active" ? "default" : "secondary"}>{s.status}</Badge>
-                <Button size="icon" variant="ghost" onClick={() => setEditing(s)}>
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button size="icon" variant="ghost" onClick={() => { if (confirm("Remove this staff?")) del.mutate(s.id); }}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-              <CollapsibleContent>
-                <div className="px-12 pb-4 space-y-3 text-sm">
-                  {s.email && <div><span className="text-muted-foreground">Email: </span>{s.email}</div>}
-                  <div>
-                    <div className="text-muted-foreground mb-1">Allocated Panchayaths</div>
-                    <div className="flex flex-wrap gap-1">
-                      {s.delivery_staff_panchayaths.length === 0 && <span className="text-muted-foreground">—</span>}
-                      {s.delivery_staff_panchayaths.map((p) => (
-                        <Badge key={p.panchayath_id} variant="outline">{p.panchayaths?.name ?? "—"}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-muted-foreground mb-1">Allocated Wards</div>
-                    <div className="flex flex-wrap gap-1">
-                      {s.delivery_staff_wards.length === 0 && <span className="text-muted-foreground">—</span>}
-                      {s.delivery_staff_wards.map((w) => (
-                        <Badge key={w.ward_id} variant="secondary">
-                          {w.wards?.ward_number ? `Ward ${w.wards.ward_number}` : w.wards?.name ?? "—"}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          );
-        })}
-      </Card>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
+        <TabsList>
+          <TabsTrigger value="delivery">Delivery Staff ({deliveryStaff.length})</TabsTrigger>
+          <TabsTrigger value="admin">Admins ({adminStaff.length})</TabsTrigger>
+        </TabsList>
+        <TabsContent value="delivery" className="mt-4">
+          {renderStaffList(deliveryStaff)}
+        </TabsContent>
+        <TabsContent value="admin" className="mt-4">
+          {renderStaffList(adminStaff)}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
