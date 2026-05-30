@@ -285,6 +285,48 @@ export type Database = {
           },
         ]
       }
+      external_tracking_sites: {
+        Row: {
+          api_key: string
+          auth_header_name: string
+          auth_header_prefix: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          test_endpoint_url: string | null
+          updated_at: string
+          website_url: string
+        }
+        Insert: {
+          api_key: string
+          auth_header_name?: string
+          auth_header_prefix?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          test_endpoint_url?: string | null
+          updated_at?: string
+          website_url: string
+        }
+        Update: {
+          api_key?: string
+          auth_header_name?: string
+          auth_header_prefix?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          test_endpoint_url?: string | null
+          updated_at?: string
+          website_url?: string
+        }
+        Relationships: []
+      }
       panchayath_connections: {
         Row: {
           created_at: string
