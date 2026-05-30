@@ -310,3 +310,272 @@ function OfflineMbtilesCard() {
     </Card>
   );
 }
+
+// ============= External Tracking Sites =============
+
+type ExternalSite = {
+  id: string;
+  name: string;
+  website_url: string;
+  api_key: string;
+  test_endpoint_url: string | null;
+  auth_header_name: string;
+  auth_header_prefix: string;
+  description: string | null;
+};
+
+type SiteForm = {
+  name: string;
+  website_url: string;
+  api_key: string;
+  test_endpoint_url: string;
+  auth_header_name: string;
+  auth_header_prefix: string;
+  description: string;
+};
+
+const emptyForm: SiteForm = {
+  name: "",
+  website_url: "",
+  api_key: "",
+  test_endpoint_url: "",
+  auth_header_name: "Authorization",
+  auth_header_prefix: "Bearer ",
+  description: "",
+};
+
+function maskKey(key: string) {
+  if (!key) return "";
+  if (key.length <= 4) return "••••";
+  return "••••" + key.slice(-4);
+}
+
+function ExternalSitesCard() {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<ExternalSite | null>(null);
+  const [form, setForm] = useState<SiteForm>(emptyForm);
+  const [testingId, setTestingId] = useState<string | null>(null);
+
+  const { data: sites, isLoading } = useQuery({
+    queryKey: ["external_tracking_sites"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("external_tracking_sites")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as ExternalSite[];
+    },
+  });
+
+  const openAdd = () => {
+    setEditing(null);
+    setForm(emptyForm);
+    setOpen(true);
+  };
+
+  const openEdit = (s: ExternalSite) => {
+    setEditing(s);
+    setForm({
+      name: s.name,
+      website_url: s.website_url,
+      api_key: s.api_key,
+      test_endpoint_url: s.test_endpoint_url ?? "",
+      auth_header_name: s.auth_header_name,
+      auth_header_prefix: s.auth_header_prefix,
+      description: s.description ?? "",
+    });
+    setOpen(true);
+  };
+
+  const save = useMutation({
+    mutationFn: async () => {
+      const name = form.name.trim();
+      const website_url = form.website_url.trim();
+      const api_key = form.api_key.trim();
+      if (!name || !website_url || !api_key) throw new Error("Name, URL and API key are required");
+      try { new URL(website_url); } catch { throw new Error("Invalid website URL"); }
+      if (form.test_endpoint_url.trim()) {
+        try { new URL(form.test_endpoint_url.trim()); } catch { throw new Error("Invalid test endpoint URL"); }
+      }
+      const { data: u } = await supabase.auth.getUser();
+      const payload = {
+        name,
+        website_url,
+        api_key,
+        test_endpoint_url: form.test_endpoint_url.trim() || null,
+        auth_header_name: form.auth_header_name.trim() || "Authorization",
+        auth_header_prefix: form.auth_header_prefix,
+        description: form.description.trim() || null,
+      };
+      if (editing) {
+        const { error } = await supabase
+          .from("external_tracking_sites")
+          .update(payload)
+          .eq("id", editing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("external_tracking_sites")
+          .insert({ ...payload, created_by: u.user?.id ?? null });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["external_tracking_sites"] });
+      qc.invalidateQueries({ queryKey: ["external_tracking_sites", "list"] });
+      toast.success(editing ? "Site updated" : "Site added");
+      setOpen(false);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const remove = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("external_tracking_sites").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["external_tracking_sites"] });
+      qc.invalidateQueries({ queryKey: ["external_tracking_sites", "list"] });
+      toast.success("Site removed");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const testKey = async (s: ExternalSite) => {
+    setTestingId(s.id);
+    const url = s.test_endpoint_url || s.website_url;
+    const headerName = s.auth_header_name || "Authorization";
+    const headerValue = (s.auth_header_prefix || "") + s.api_key;
+    try {
+      const res = await fetch(url, { method: "GET", headers: { [headerName]: headerValue } });
+      if (res.ok) toast.success(`OK — ${res.status} ${res.statusText}`);
+      else toast.error(`Failed — ${res.status} ${res.statusText}`);
+    } catch (e: any) {
+      toast.error("Network/CORS error — key not verifiable from browser");
+    } finally {
+      setTestingId(null);
+    }
+  };
+
+  return (
+    <Card className="mt-6 max-w-2xl">
+      <CardHeader>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Globe className="h-5 w-5" /> External tracking sites
+            </CardTitle>
+            <CardDescription>
+              Add external order-tracking / delivery websites with their API keys. Keys are stored
+              in the database and only visible to admins.
+            </CardDescription>
+          </div>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={openAdd} size="sm">
+                <Plus className="h-4 w-4" /> Add site
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>{editing ? "Edit site" : "Add external site"}</DialogTitle>
+                <DialogDescription>
+                  Configure how to call the external API. The Test button sends a GET request to
+                  the test endpoint with your API key in the auth header.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-3">
+                <div>
+                  <Label htmlFor="es-name">Name</Label>
+                  <Input id="es-name" value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                </div>
+                <div>
+                  <Label htmlFor="es-url">Website URL</Label>
+                  <Input id="es-url" placeholder="https://example.com" value={form.website_url}
+                    onChange={(e) => setForm({ ...form, website_url: e.target.value })} />
+                </div>
+                <div>
+                  <Label htmlFor="es-key">API key</Label>
+                  <Input id="es-key" autoComplete="off" spellCheck={false} value={form.api_key}
+                    onChange={(e) => setForm({ ...form, api_key: e.target.value })} />
+                </div>
+                <div>
+                  <Label htmlFor="es-test">Test endpoint URL (optional)</Label>
+                  <Input id="es-test" placeholder="defaults to website URL" value={form.test_endpoint_url}
+                    onChange={(e) => setForm({ ...form, test_endpoint_url: e.target.value })} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="es-hname">Auth header name</Label>
+                    <Input id="es-hname" value={form.auth_header_name}
+                      onChange={(e) => setForm({ ...form, auth_header_name: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label htmlFor="es-hpre">Auth header prefix</Label>
+                    <Input id="es-hpre" value={form.auth_header_prefix}
+                      onChange={(e) => setForm({ ...form, auth_header_prefix: e.target.value })} />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="es-desc">Description (optional)</Label>
+                  <Textarea id="es-desc" rows={2} value={form.description}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })} />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setOpen(false)}>
+                  <X className="h-4 w-4" /> Cancel
+                </Button>
+                <Button onClick={() => save.mutate()} disabled={save.isPending}>
+                  <Check className="h-4 w-4" /> {save.isPending ? "Saving…" : "Save"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground">Loading…</p>
+        ) : !sites?.length ? (
+          <div className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
+            No external sites yet. Click <b>Add site</b> to configure one.
+          </div>
+        ) : (
+          <ul className="divide-y rounded-md border">
+            {sites.map((s) => (
+              <li key={s.id} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <div className="font-medium">{s.name}</div>
+                  <a href={s.website_url} target="_blank" rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+                    {s.website_url} <ExternalLink className="h-3 w-3" />
+                  </a>
+                  <div className="mt-0.5 text-xs text-muted-foreground">
+                    Key: <code>{maskKey(s.api_key)}</code> · {s.auth_header_name}: {s.auth_header_prefix}…
+                  </div>
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <Button size="sm" variant="outline" onClick={() => testKey(s)} disabled={testingId === s.id}>
+                    {testingId === s.id ? "Testing…" : "Test"}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => openEdit(s)}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button size="sm" variant="outline"
+                    onClick={() => { if (confirm(`Remove ${s.name}?`)) remove.mutate(s.id); }}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
