@@ -12,6 +12,8 @@ import {
   DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { testExternalSite } from "@/lib/external-sites.functions";
 import { Save, ExternalLink, Upload, Trash2, MapIcon, Plus, Globe, Pencil, Check, X } from "lucide-react";
 import { GOOGLE_MAPS_KEY_NAME, useGoogleMapsKey } from "@/hooks/use-google-maps-key";
 import { useQuery } from "@tanstack/react-query";
